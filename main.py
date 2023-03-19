@@ -7,7 +7,7 @@ import csv
 import requests
 
 def pbp_stats():
-    URL = "https://api.pbpstats.com/get-totals/nba?Season=2022-23&SeasonType=Regular%2BSeason&Type=Player"
+    URL = "https://api.pbpstats.com/get-totals/nba?Season=2014-15&SeasonType=Regular%2BSeason&Type=Player"
 
     r = requests.get(url=URL)
 
@@ -34,7 +34,7 @@ def pbp_stats():
             charges = round(record['Charge Fouls Drawn']/games_played,2)
         else:
             charges = 0
-        relevant_stats[record['Name']] = [mpg, steals, blocks_perimeter, mpg, charges, blocks_rim]
+        relevant_stats[record['Name']] = [mpg, steals, blocks_perimeter, charges, mpg, blocks_rim]
     return relevant_stats
 
 def traditional_stats():
@@ -79,7 +79,7 @@ def traditional_stats():
     return traditional_stats
 
 def team_defenses():
-    url = 'https://www.nba.com/stats/teams/defense'
+    url = 'https://www.nba.com/stats/teams/defense?Season=2013-14'
 
     driver = webdriver.Chrome(service=ChromeService(
         ChromeDriverManager().install()))
@@ -109,9 +109,9 @@ def team_defenses():
                 opp_pts_paint = float(cell.text)
             i+=1
         if team:
-            team_defenses.append([get_team_abbrivation(team), round(def_rtg-opp_pts_paint,1), opp_pts_paint])
-    header = ['Team', 'PDEF', 'RDEF']
-    with open('team_defenses.csv', 'w', encoding='UTF8', newline='') as f:
+            team_defenses.append([get_team_abbrivation(team), def_rtg, opp_pts_paint])
+    header = ['Team', 'DEF', 'RDEF']
+    with open('team_defenses_13_14.csv', 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerows(team_defenses)
@@ -178,9 +178,54 @@ def get_team_abbrivation(fullname):
     elif fullname == "Houston Rockets":
         return "HOU"
 
+def defense_dash_overall(pbp_stats):
+    # Defense dash for greater than 15
+    url = 'https://www.nba.com/stats/players/defense-dash-overall?Season=2014-15'
+
+    driver = webdriver.Chrome(service=ChromeService(
+        ChromeDriverManager().install()))
+
+    driver.get(url)
+
+    selects = driver.find_elements(By.CLASS_NAME, "DropDown_select__4pIg9 ")
+    for select in selects:
+        options = Select(select).options
+
+    for option in options:
+        if option.text == 'All':
+            option.click() # select() in earlier versions of webdriver
+            break
+
+    # Find the table element
+    table = driver.find_element(By.CLASS_NAME, 'Crom_table__p1iZz')
+
+    # Find all rows in the table
+    rows = table.find_elements(By.TAG_NAME, 'tr')
+    defense_dash_overall = []
+    # Loop through each row and extract the data from each cell
+    for row in rows:
+        player_dd_overall = []
+        # Find all cells in the row
+        cells = row.find_elements(By.TAG_NAME, 'td')
+        for cell in cells:
+            player_dd_overall.append(cell.text)
+        # Add pbp stats to defense_dash if not empty
+        if player_dd_overall:
+            if player_dd_overall[0] in pbp_stats:
+                defense_dash_overall.append(player_dd_overall + pbp_stats[player_dd_overall[0]][:4])
+            else:
+                defense_dash_overall.append(player_dd_overall + ['NaN', 'NaN', 'NaN', 'NaN'])
+
+
+    header = ['Player', 'Team', 'Age', 'Position', 'GP', 'Games', 'FREQ%', 'DFGM', 'DFGA', 'DFG%', 'FG%', 'DIFF%', "MP", "STL", "BLKP", "Charges"]
+    with open('defense_dash_overall_14_15.csv', 'w', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        writer.writerows(defense_dash_overall)
+
 def defense_dash_gt15(pbp_stats):
     # Defense dash for greater than 15
-    url = 'https://www.nba.com/stats/players/defense-dash-gt15'
+    url = 'https://www.nba.com/stats/players/defense-dash-gt15?Season=2013-14'
 
     driver = webdriver.Chrome(service=ChromeService(
         ChromeDriverManager().install()))
@@ -212,20 +257,20 @@ def defense_dash_gt15(pbp_stats):
         # Add pbp stats to defense_dash if not empty
         if player_dd_gt15:
             if player_dd_gt15[0] in pbp_stats:
-                defense_dash_gt15.append(player_dd_gt15 + pbp_stats[player_dd_gt15[0]][:3])
+                defense_dash_gt15.append(player_dd_gt15 + pbp_stats[player_dd_gt15[0]][:4])
             else:
-                defense_dash_gt15.append(player_dd_gt15 + ['NaN', 'NaN', 'NaN'])
+                defense_dash_gt15.append(player_dd_gt15 + ['NaN', 'NaN', 'NaN', 'NaN'])
 
 
-    header = ['Player', 'Team', 'Age', 'Position', 'GP', 'Games', 'FREQ%', 'DFGM', 'DFGA', 'DFG%', 'FG%', 'DIFF%', "MP", "STL", "BLKP"]
-    with open('defense_dash_gt15.csv', 'w', encoding='UTF8', newline='') as f:
+    header = ['Player', 'Team', 'Age', 'Position', 'GP', 'Games', 'FREQ%', 'DFGM', 'DFGA', 'DFG%', 'FG%', 'DIFF%', "MP", "STL", "BLKP", "Charges"]
+    with open('defense_dash_gt15_13_14.csv', 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerows(defense_dash_gt15)
 
 def defense_dash_lt10(pbp_stats):
     # Less than 10 foot
-    url = 'https://www.nba.com/stats/players/defense-dash-lt10'
+    url = 'https://www.nba.com/stats/players/defense-dash-lt10?Season=2013-14'
 
     driver = webdriver.Chrome(service=ChromeService(
         ChromeDriverManager().install()))
@@ -258,19 +303,20 @@ def defense_dash_lt10(pbp_stats):
         # Add pbp stats to defense dash if not empty
         if player_dd_lt10:
             if player_dd_lt10[0] in pbp_stats:
-                defense_dash_lt10.append(player_dd_lt10 + pbp_stats[player_dd_lt10[0]][-3:])
+                defense_dash_lt10.append(player_dd_lt10 + pbp_stats[player_dd_lt10[0]][-2:])
             else:
-                defense_dash_lt10.append(player_dd_lt10 + ['NaN', 'NaN', 'NaN'])
+                defense_dash_lt10.append(player_dd_lt10 + ['NaN', 'NaN'])
 
 
-    header = ['Player', 'Team', 'Age', 'Position', 'GP', 'Games', 'FREQ%', 'DFGM', 'DFGA', 'DFG%', 'FG%', 'DIFF%', "MP", "Charges", "BLKR"]
-    with open('defense_dash_lt10.csv', 'w', encoding='UTF8', newline='') as f:
+    header = ['Player', 'Team', 'Age', 'Position', 'GP', 'Games', 'FREQ%', 'DFGM', 'DFGA', 'DFG%', 'FG%', 'DIFF%', "MP", "BLKR"]
+    with open('defense_dash_lt10_13_14.csv', 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerows(defense_dash_lt10)
 
-#pbp_stats = pbp_stats()
+pbp_stats = pbp_stats()
+#team_defenses()
 #traditional_stats = traditional_stats()
 #defense_dash_gt15(pbp_stats)
 #defense_dash_lt10(pbp_stats)
-team_defenses()
+defense_dash_overall(pbp_stats)
