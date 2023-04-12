@@ -16,29 +16,29 @@ def pbp_stats():
     relevant_stats = {}
     for record in data:
         games_played = record['GamesPlayed']
-        mpg = round(record['Minutes']/games_played,1)
+        mpg = record['Minutes']/games_played
         if 'Steals' in record:
-            steals = round(record['Steals']/games_played,1)
+            steals = record['Steals']/games_played
         else:
             steals = 0
         if 'Blocks' in record:
             if 'BlockedAtRim' in record:
-                blocks_rim = round(record['BlockedAtRim'] / games_played, 1)
-                blocks_perimeter = round((record['Blocks'] - record['BlockedAtRim']) / games_played, 1)
+                blocks_rim = record['BlockedAtRim'] / games_played
+                blocks_perimeter = (record['Blocks'] - record['BlockedAtRim']) / games_played
             else:
-                blocks_perimeter = round(record['Blocks']/games_played,1)
+                blocks_perimeter = record['Blocks']/games_played
         else:
             blocks_perimeter = 0
             blocks_rim = 0
         if 'Charge Fouls Drawn' in record:
-            charges = round(record['Charge Fouls Drawn']/games_played,2)
+            charges = record['Charge Fouls Drawn']/games_played
         else:
             charges = 0
         relevant_stats[record['Name']] = [mpg, steals, blocks_perimeter, charges, mpg, blocks_rim]
     return relevant_stats
 
 def traditional_stats():
-    url = 'https://www.nba.com/stats/players/traditional'
+    url = 'https://www.nba.com/stats/players/traditional?Season=2014-15'
 
     driver = webdriver.Chrome(service=ChromeService(
         ChromeDriverManager().install()))
@@ -59,24 +59,29 @@ def traditional_stats():
 
     # Find all rows in the table
     rows = table.find_elements(By.TAG_NAME, 'tr')
-    traditional_stats = {}
+    traditional_stats = []
     # Loop through each row and extract the data from each cell
+    num = 0
     for row in rows:
+        player_stats = []
+        print(num)
         i=0
         # Find all cells in the row
         cells = row.find_elements(By.TAG_NAME, 'td')
-        player=''
-        player_stats = []
         for cell in cells:
-            if i==1:
-                player = cell.text
-            elif i==7:
-                player_stats.append(cell.text)
-            elif i==23:
+            if i != 0 and i != 5 and i != 6 and i != 26 and i != 27 and i != 28:
                 player_stats.append(cell.text)
             i+=1
-        traditional_stats[player] = player_stats
-    return traditional_stats
+        if num != 0:
+            traditional_stats.append(player_stats)
+        num+=1
+
+    header = ['Player', 'Team', 'Age', 'GP', 'MIN', 'PTS', 'FGM', 'FGA', 'FG%', '3PM', '3PA', '3P%',
+                  "FTM", "FTA", "FT%", "OREB", "DREB", "REB", "AST", "TOV", "STL", "BLK", "PF", "+/-"]
+    with open('traditional_13_14.csv', 'w', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        writer.writerows(traditional_stats)
 
 def team_defenses():
     url = 'https://www.nba.com/stats/teams/defense?Season=2013-14'
@@ -141,6 +146,8 @@ def get_team_abbrivation(fullname):
         return "MIA"
     elif fullname == "LA Clippers":
         return "LAC"
+    elif fullname == "Los Angeles Clippers":
+        return "LAC"
     elif fullname == "Atlanta Hawks":
         return "ATL"
     elif fullname == "Dallas Mavericks":
@@ -171,6 +178,8 @@ def get_team_abbrivation(fullname):
         return "ORL"
     elif fullname == "Charlotte Hornets":
         return "CHA"
+    elif fullname == "Charlotte Bobcats":
+        return "CHA"
     elif fullname == "San Antonio Spurs":
         return "SAS"
     elif fullname == "Detroit Pistons":
@@ -180,7 +189,7 @@ def get_team_abbrivation(fullname):
 
 def defense_dash_overall(pbp_stats):
     # Defense dash for greater than 15
-    url = 'https://www.nba.com/stats/players/defense-dash-overall?Season=2014-15'
+    url = 'https://www.nba.com/stats/players/defense-dash-overall?Season=2013-14'
 
     driver = webdriver.Chrome(service=ChromeService(
         ChromeDriverManager().install()))
@@ -218,7 +227,7 @@ def defense_dash_overall(pbp_stats):
 
 
     header = ['Player', 'Team', 'Age', 'Position', 'GP', 'Games', 'FREQ%', 'DFGM', 'DFGA', 'DFG%', 'FG%', 'DIFF%', "MP", "STL", "BLKP", "Charges"]
-    with open('defense_dash_overall_14_15.csv', 'w', encoding='UTF8', newline='') as f:
+    with open('defense_dash_overall_13_14.csv', 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerows(defense_dash_overall)
@@ -315,8 +324,8 @@ def defense_dash_lt10(pbp_stats):
         writer.writerows(defense_dash_lt10)
 
 pbp_stats = pbp_stats()
-#team_defenses()
-#traditional_stats = traditional_stats()
+team_defenses()
+traditional_stats = traditional_stats()
 #defense_dash_gt15(pbp_stats)
-#defense_dash_lt10(pbp_stats)
+defense_dash_lt10(pbp_stats)
 defense_dash_overall(pbp_stats)
